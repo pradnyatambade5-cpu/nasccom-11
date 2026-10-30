@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}AI Financial Advisor{% endblock %}
+{% block page_title %}AI Financial Advisor & Intelligence Hub{% endblock %}
+
+{% block content %}
+<!-- Compliance Disclaimer Banner -->
+<div class="disclaimer-banner">
+  <i class="ri-information-line" style="font-size: 1.4rem;"></i>
+  <div>
+    <strong>Regulatory Disclaimer:</strong> These insights are for informational purposes only and do not replace registered professional financial advice. All recommendations are derived algorithmically from your recorded data.
+  </div>
+</div>
+
+<div class="advisor-grid">
+  <!-- Left Column: 5 Categorized Advice Sections -->
+  <div>
+    <!-- Section 1: Summary & Score -->
+    <div class="card audit-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ri-dashboard-2-line" style="color: #6366f1;"></i>
+          1. Financial Health Summary
+        </div>
+        <span class="badge badge-purple">Score: {{ audit.score }}/100</span>
+      </div>
+
+      <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 16px;">
+        {{ audit.summary_text }}
+      </p>
+
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div class="badge badge-success">
+          <i class="ri-check-line"></i> Income: {{ audit.monthly_income | inr }}
+        </div>
+        <div class="badge badge-warning">
+          <i class="ri-shopping-cart-line"></i> Expenses: {{ audit.total_expenses | inr }}
+        </div>
+        <div class="badge badge-info">
+          <i class="ri-safe-2-line"></i> Savings: {{ audit.monthly_savings | inr }} ({{ audit.savings_rate }}%)
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Spending Analysis (50/30/20 Rule) -->
+    <div class="card audit-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ri-pie-chart-2-line" style="color: #10b981;"></i>
+          2. Spending Analysis (50/30/20 Rule)
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Needs (50%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 4px;">
+            <span><strong>Needs</strong> (Target: 50%) - Rent, Utilities, Food, Transport</span>
+            <span style="font-weight: 700; color: #fff;">{{ audit.spending_analysis.needs_pct }}% ({{ audit.spending_analysis.needs_spend | inr }})</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar {{ 'progress-danger' if audit.spending_analysis.needs_pct > 60 else 'progress-success' }}" style="width: {{ [audit.spending_analysis.needs_pct, 100.0] | min }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Wants (30%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 4px;">
+            <span><strong>Wants</strong> (Target: 30%) - Entertainment, Shopping, Travel</span>
+            <span style="font-weight: 700; color: #fff;">{{ audit.spending_analysis.wants_pct }}% ({{ audit.spending_analysis.wants_spend | inr }})</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar {{ 'progress-danger' if audit.spending_analysis.wants_pct > 35 else 'progress-warning' }}" style="width: {{ [audit.spending_analysis.wants_pct, 100.0] | min }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Savings (20%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 4px;">
+            <span><strong>Savings</strong> (Target: ≥20%) - Investments & Buffer</span>
+            <span style="font-weight: 700; color: #fff;">{{ audit.spending_analysis.savings_pct }}% ({{ audit.spending_analysis.savings_spend | inr }})</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar {{ 'progress-success' if audit.spending_analysis.savings_pct >= 20 else 'progress-danger' }}" style="width: {{ [audit.spending_analysis.savings_pct, 100.0] | min }}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Overspending Alerts -->
+    <div class="card audit-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ri-alarm-warning-line" style="color: #f43f5e;"></i>
+          3. Overspending Alerts
+        </div>
+      </div>
+
+      {% if audit.overspending_alerts %}
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          {% for alert in audit.overspending_alerts %}
+            <div style="background: rgba(244, 63, 94, 0.08); border-left: 3px solid var(--accent-danger); padding: 12px 14px; border-radius: var(--radius-sm); font-size: 0.88rem;">
+              <strong style="color: #fda4af;">{{ alert.category }}:</strong>
+              {% if not alert.unbudgeted %}
+                Exceeded defined limit of {{ alert.limit | inr }} by {{ alert.overage | inr }} (+{{ alert.pct_over }}%). Total spent: {{ alert.spent | inr }}.
+              {% else %}
+                High unbudgeted spending of {{ alert.spent | inr }} ({{ alert.pct_over }}% of monthly income).
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="color: var(--accent-success); font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+          <i class="ri-checkbox-circle-line" style="font-size: 1.2rem;"></i>
+          No overspending triggers detected this month! All categories are within parameters.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Section 4: Savings Suggestions -->
+    <div class="card audit-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ri-lightbulb-line" style="color: #f59e0b;"></i>
+          4. Savings Suggestions
+        </div>
+      </div>
+      <ul style="padding-left: 20px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7;">
+        {% for s in audit.savings_suggestions %}
+          <li>{{ s }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Section 5: Budget Suggestions -->
+    <div class="card audit-card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ri-equalizer-line" style="color: #06b6d4;"></i>
+          5. Budget Suggestions
+        </div>
+      </div>
+      <ul style="padding-left: 20px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.7;">
+        {% for b in audit.budget_suggestions %}
+          <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <!-- Right Column: Interactive Chat Bot -->
+  <div>
+    <div class="chat-container">
+      <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.95); display: flex; align-items: center; gap: 12px;">
+        <div class="msg-avatar" style="background: linear-gradient(135deg, #6366f1, #3b82f6); color: #fff;">
+          <i class="ri-robot-2-line"></i>
+        </div>
+        <div>
+          <div style="font-weight: 700; color: #fff;">FinAdvisor Bot</div>
+          <div style="font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 4px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+            Online • Rule Engine Active
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg bot">
+          <div class="msg-avatar"><i class="ri-robot-2-line"></i></div>
+          <div class="msg-bubble">
+            Hello {{ current_user.name }}! I am your AI Financial Advisor. Ask me anything about your income, spending habits, budgets, or savings goals.
+          </div>
+        </div>
+      </div>
+
+      <!-- Suggested Prompts -->
+      <div class="suggested-prompts">
+        <div class="prompt-pill" data-prompt="Where am I overspending?">
+          Where am I overspending?
+        </div>
+        <div class="prompt-pill" data-prompt="How can I save more?">
+          How can I save more?
+        </div>
+        <div class="prompt-pill" data-prompt="Analyze my spending">
+          Analyze my spending
+        </div>
+        <div class="prompt-pill" data-prompt="Give me a budget suggestion">
+          Give me a budget suggestion
+        </div>
+        <div class="prompt-pill" data-prompt="Am I on track for my savings goals?">
+          Am I on track for my savings goals?
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <form class="chat-input-area" id="chatForm">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type your financial question..." autocomplete="off">
+        <button type="submit" class="btn btn-primary" style="padding: 0 18px;">
+          <i class="ri-send-plane-fill"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+{% endblock %}

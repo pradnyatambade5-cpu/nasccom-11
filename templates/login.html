@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Personal Finance Advisor Bot{% endblock %}
+
+{% block public_content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-icon" style="margin: 0 auto 16px; width: 48px; height: 48px; font-size: 26px;">
+        <i class="ri-wallet-3-line"></i>
+      </div>
+      <h2 class="auth-title">Welcome Back</h2>
+      <p class="auth-subtitle">Sign in to manage your budget and advisor insights</p>
+    </div>
+
+    <!-- Quick Demo Login Button -->
+    <a href="{{ url_for('auth.demo_login') }}" class="btn btn-primary" style="width: 100%; margin-bottom: 8px;">
+      <i class="ri-flashlight-line"></i> One-Click Demo User Login
+    </a>
+    <div style="text-align: center; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+      Instant login as <code>demo@example.com</code> with seeded sample records
+    </div>
+
+    <div class="auth-divider">or sign in with credentials</div>
+
+    <form method="POST" action="{{ url_for('auth.login') }}">
+      <div class="form-group">
+        <label class="form-label" for="email">Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.85rem;">
+        <label style="display: flex; align-items: center; gap: 8px; color: var(--text-secondary); cursor: pointer;">
+          <input type="checkbox" name="remember" style="accent-color: var(--accent-primary);">
+          <span>Remember me</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-outline" style="width: 100%;">
+        <i class="ri-login-box-line"></i> Sign In
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 24px; font-size: 0.88rem; color: var(--text-secondary);">
+      Don't have an account yet? 
+      <a href="{{ url_for('auth.register') }}" style="font-weight: 600;">Create Account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

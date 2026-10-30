@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Savings Goals{% endblock %}
+{% block page_title %}Savings Goals & Milestone Milestones{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+  <div>
+    <h2 style="font-size: 1.4rem;">Target Savings & Future Goals</h2>
+    <p style="color: var(--text-secondary); font-size: 0.9rem;">Automate target tracking, remaining deadlines, and required monthly contributions</p>
+  </div>
+  <button class="btn btn-success" onclick="openModal('addGoalModal')">
+    <i class="ri-add-line"></i> Create New Savings Goal
+  </button>
+</div>
+
+<!-- Summary Metrics -->
+<div class="stats-grid">
+  <div class="stat-card savings">
+    <div class="stat-icon"><i class="ri-safe-2-line"></i></div>
+    <div class="stat-content">
+      <div class="stat-label">Total Saved Across Goals</div>
+      <div class="stat-value">{{ total_saved | inr }}</div>
+      <div class="stat-subtext">Cumulative deposited capital</div>
+    </div>
+  </div>
+
+  <div class="stat-card rate">
+    <div class="stat-icon"><i class="ri-flag-2-line"></i></div>
+    <div class="stat-content">
+      <div class="stat-label">Total Target Value</div>
+      <div class="stat-value">{{ total_target | inr }}</div>
+      <div class="stat-subtext">Sum of all target deadlines</div>
+    </div>
+  </div>
+
+  <div class="stat-card income">
+    <div class="stat-icon"><i class="ri-percent-line"></i></div>
+    <div class="stat-content">
+      <div class="stat-label">Aggregate Progress</div>
+      <div class="stat-value">{{ overall_progress }}%</div>
+      <div class="stat-subtext">{{ total_remaining | inr }} left to achieve</div>
+    </div>
+  </div>
+</div>
+
+<!-- Goals Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px;">
+  {% for g in goals %}
+  <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+        <div>
+          <h3 style="font-size: 1.2rem; color: #fff; margin-bottom: 4px;">{{ g.name }}</h3>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">
+            <i class="ri-calendar-line"></i> Target Deadline: {{ g.deadline.strftime('%d %b %Y') }}
+          </span>
+        </div>
+        <span class="badge badge-purple" style="font-size: 0.85rem;">{{ g.progress_percent }}%</span>
+      </div>
+
+      <!-- Financial Metrics -->
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+        <span style="font-size: 1.45rem; font-weight: 800; font-family: var(--font-heading); color: #fff;">
+          {{ g.current_amount | inr }}
+        </span>
+        <span style="font-size: 0.9rem; color: var(--text-secondary);">
+          Target: {{ g.target_amount | inr }}
+        </span>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar-container">
+        <div class="progress-bar progress-success" style="width: {{ g.progress_percent }}%;"></div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">
+        <span>Remaining: {{ g.remaining_amount | inr }}</span>
+        <span>{{ g.months_remaining }} month(s) left</span>
+      </div>
+
+      <!-- Required Monthly Contribution Callout -->
+      <div style="background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: var(--radius-md); padding: 12px; margin-bottom: 18px;">
+        <div style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Required Monthly Saving</div>
+        <div style="font-size: 1.1rem; font-weight: 700; color: #818cf8; margin-top: 2px;">
+          {{ g.monthly_required | inr }} / month
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; pt: 14px; border-top: 1px solid var(--border-color);">
+      <button class="btn btn-success btn-sm" onclick="openDepositModal('{{ g.id }}', '{{ g.name }}')">
+        <i class="ri-add-line"></i> Quick Deposit
+      </button>
+
+      <form method="POST" action="{{ url_for('savings.delete', id=g.id) }}" onsubmit="return confirm('Delete this savings goal?');">
+        <button type="submit" class="btn btn-danger btn-sm" title="Delete Goal">
+          <i class="ri-delete-bin-line"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div style="grid-column: 1 / -1; text-align: center; padding: 60px; color: var(--text-muted);">
+    <i class="ri-safe-2-line" style="font-size: 3rem; display: block; margin-bottom: 12px;"></i>
+    No savings goals created yet. Set a target milestone above!
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal: Add Goal -->
+<div class="modal-backdrop" id="addGoalModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 style="font-size: 1.15rem;"><i class="ri-safe-2-line" style="color: var(--accent-success);"></i> New Savings Goal</h3>
+      <button class="close-btn" onclick="closeModal('addGoalModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('savings.add') }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="goal_name">Goal Name *</label>
+          <input type="text" id="goal_name" name="name" class="form-control" placeholder="e.g. New Laptop (MacBook Pro)" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="target_amount">Target Amount in INR (₹) *</label>
+          <input type="number" step="0.01" min="1" id="target_amount" name="target_amount" class="form-control" placeholder="e.g. 70000" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="current_amount">Current Saved Amount (₹)</label>
+          <input type="number" step="0.01" min="0" id="current_amount" name="current_amount" class="form-control" value="0">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="deadline">Target Deadline *</label>
+          <input type="date" id="deadline" name="deadline" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('addGoalModal')">Cancel</button>
+        <button type="submit" class="btn btn-success"><i class="ri-check-line"></i> Create Goal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Quick Deposit -->
+<div class="modal-backdrop" id="depositModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 style="font-size: 1.15rem;"><i class="ri-hand-coin-line" style="color: var(--accent-success);"></i> Deposit to <span id="depositGoalName"></span></h3>
+      <button class="close-btn" onclick="closeModal('depositModal')">&times;</button>
+    </div>
+    <form method="POST" id="depositForm">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="deposit_amount">Deposit Amount in INR (₹) *</label>
+          <input type="number" step="0.01" min="1" id="deposit_amount" name="amount" class="form-control" placeholder="e.g. 5000" required autofocus>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('depositModal')">Cancel</button>
+        <button type="submit" class="btn btn-success"><i class="ri-check-line"></i> Add Deposit</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openDepositModal(goalId, goalName) {
+  document.getElementById('depositForm').action = `/savings/deposit/${goalId}`;
+  document.getElementById('depositGoalName').textContent = goalName;
+  openModal('depositModal');
+}
+</script>
+{% endblock %}

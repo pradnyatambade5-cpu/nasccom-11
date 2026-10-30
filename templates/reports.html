@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Financial Report{% endblock %}
+{% block page_title %}Monthly Financial Report & Statements{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+  <div>
+    <h2 style="font-size: 1.4rem;">Monthly Financial Report</h2>
+    <p style="color: var(--text-secondary); font-size: 0.9rem;">Comprehensive monthly statement, category variance, and ledger download</p>
+  </div>
+  <div style="display: flex; gap: 10px;" class="no-print">
+    <button onclick="window.print()" class="btn btn-outline">
+      <i class="ri-printer-line"></i> Print Statement
+    </button>
+    <a href="{{ url_for('reports.export_csv') }}" class="btn btn-primary">
+      <i class="ri-download-2-line"></i> Export CSV
+    </a>
+  </div>
+</div>
+
+<!-- Month / Year Filter Form -->
+<div class="card no-print" style="margin-bottom: 24px;">
+  <form method="GET" action="{{ url_for('reports.index') }}" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 180px;">
+      <label class="form-label" for="month">Select Month</label>
+      <select id="month" name="month" class="form-control">
+        {% for m_num, m_name in month_names %}
+          <option value="{{ m_num }}" {% if m_num == selected_month %}selected{% endif %}>{{ m_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" for="year">Select Year</label>
+      <select id="year" name="year" class="form-control">
+        {% for y in years_range %}
+          <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-outline" style="height: 44px;">
+        <i class="ri-filter-3-line"></i> Apply Filter
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Statement Summary Sheet -->
+<div class="card" style="margin-bottom: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+    <div>
+      <h3 style="font-size: 1.3rem; color: #fff;">Financial Statement: {{ month_names[selected_month - 1][1] }} {{ selected_year }}</h3>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">Account Holder: {{ current_user.name }} ({{ current_user.email }})</div>
+    </div>
+    <span class="badge badge-purple" style="font-size: 0.85rem;">Official Summary</span>
+  </div>
+
+  <div class="stats-grid" style="margin-bottom: 0;">
+    <div class="stat-card income">
+      <div class="stat-content">
+        <div class="stat-label">Total Monthly Inflows</div>
+        <div class="stat-value">{{ total_income | inr }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card expense">
+      <div class="stat-content">
+        <div class="stat-label">Total Monthly Outflows</div>
+        <div class="stat-value">{{ total_expenses | inr }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card savings">
+      <div class="stat-content">
+        <div class="stat-label">Net Surplus / Savings</div>
+        <div class="stat-value">{{ net_savings | inr }}</div>
+      </div>
+    </div>
+
+    <div class="stat-card rate">
+      <div class="stat-content">
+        <div class="stat-label">Calculated Savings Rate</div>
+        <div class="stat-value">{{ savings_rate }}%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Category Performance Table -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="ri-pie-chart-line"></i> Category Expense Analysis & Budget Variance
+    </div>
+  </div>
+
+  {% if comparison %}
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th style="text-align: right;">Actual Spent</th>
+          <th style="text-align: right;">Budget Cap</th>
+          <th style="text-align: right;">Variance / Utilization</th>
+          <th style="text-align: center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in comparison %}
+        <tr>
+          <td style="font-weight: 600; color: #fff;">{{ c.category }}</td>
+          <td style="text-align: right;" class="amount-expense">{{ c.spent | inr }}</td>
+          <td style="text-align: right;">{{ c.limit | inr if c.limit > 0 else 'Unbudgeted' }}</td>
+          <td style="text-align: right;">
+            {% if c.limit > 0 %}
+              {{ c.pct }}%
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td style="text-align: center;">
+            {% if c.exceeded %}
+              <span class="badge badge-danger">Exceeded</span>
+            {% elif c.limit > 0 and c.pct >= 80 %}
+              <span class="badge badge-warning">Near Limit</span>
+            {% elif c.limit > 0 %}
+              <span class="badge badge-success">On Track</span>
+            {% else %}
+              <span class="badge badge-info">Logged</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+    No expenses recorded for {{ month_names[selected_month - 1][1] }} {{ selected_year }}.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Detailed Transactions Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i class="ri-file-list-3-line"></i> Itemized Transaction Records
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="custom-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Category / Source</th>
+          <th>Description</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inc in incomes %}
+        <tr>
+          <td>{{ inc.date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge badge-success">Income</span></td>
+          <td>{{ inc.source }}</td>
+          <td style="color: #fff;">{{ inc.description or '-' }}</td>
+          <td style="text-align: right;" class="amount-income">+{{ inc.amount | inr }}</td>
+        </tr>
+        {% endfor %}
+
+        {% for exp in expenses %}
+        <tr>
+          <td>{{ exp.date.strftime('%d %b %Y') }}</td>
+          <td><span class="badge badge-danger">Expense</span></td>
+          <td>{{ exp.category }}</td>
+          <td style="color: #fff;">{{ exp.description or '-' }}</td>
+          <td style="text-align: right;" class="amount-expense">-{{ exp.amount | inr }}</td>
+        </tr>
+        {% endfor %}
+
+        {% if not incomes and not expenses %}
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted);">
+            No transactions found for this period.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

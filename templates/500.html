@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Server Error{% endblock %}
+
+{% block public_content %}
+<div class="auth-wrapper">
+  <div class="auth-card" style="text-align: center;">
+    <div style="font-size: 4rem; color: #f43f5e; margin-bottom: 12px; font-weight: 800; font-family: var(--font-heading);">
+      500
+    </div>
+    <h2 class="auth-title">Internal Server Error</h2>
+    <p class="auth-subtitle" style="margin-bottom: 24px;">
+      An unexpected error occurred while processing your financial request. Please try again later.
+    </p>
+    <a href="{{ url_for('dashboard.index') if current_user.is_authenticated else url_for('auth.landing') }}" class="btn btn-outline">
+      <i class="ri-refresh-line"></i> Reload Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Overview{% endblock %}
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<!-- Welcome & Quick Actions Banner -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px;">
+  <div>
+    <h2 style="font-size: 1.5rem;">Welcome, {{ current_user.name }} 👋</h2>
+    <p style="color: var(--text-secondary); font-size: 0.92rem;">
+      Here is your live personal financial health report for {{ today.strftime('%B %Y') }}.
+    </p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('income.index') }}" class="btn btn-success btn-sm">
+      <i class="ri-add-line"></i> Add Income
+    </a>
+    <a href="{{ url_for('expenses.index') }}" class="btn btn-danger btn-sm">
+      <i class="ri-subtract-line"></i> Add Expense
+    </a>
+    <a href="{{ url_for('advisor.index') }}" class="btn btn-primary btn-sm">
+      <i class="ri-robot-2-line"></i> Ask AI Advisor
+    </a>
+  </div>
+</div>
+
+<!-- Primary Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card income">
+    <div class="stat-icon">
+      <i class="ri-arrow-left-down-line"></i>
+    </div>
+    <div class="stat-content">
+      <div class="stat-label">Monthly Income</div>
+      <div class="stat-value">{{ monthly_income | inr }}</div>
+      <div class="stat-subtext">Current month earnings</div>
+    </div>
+  </div>
+
+  <div class="stat-card expense">
+    <div class="stat-icon">
+      <i class="ri-arrow-right-up-line"></i>
+    </div>
+    <div class="stat-content">
+      <div class="stat-label">Total Expenses</div>
+      <div class="stat-value">{{ total_expenses | inr }}</div>
+      <div class="stat-subtext">Current month outlays</div>
+    </div>
+  </div>
+
+  <div class="stat-card savings">
+    <div class="stat-icon">
+      <i class="ri-safe-2-line"></i>
+    </div>
+    <div class="stat-content">
+      <div class="stat-label">Net Monthly Savings</div>
+      <div class="stat-value">{{ monthly_savings | inr }}</div>
+      <div class="stat-subtext">{{ 'Surplus retained' if monthly_savings >= 0 else 'Deficit incurred' }}</div>
+    </div>
+  </div>
+
+  <div class="stat-card rate">
+    <div class="stat-icon">
+      <i class="ri-percent-line"></i>
+    </div>
+    <div class="stat-content">
+      <div class="stat-label">Savings Rate</div>
+      <div class="stat-value">{{ savings_rate }}%</div>
+      <div class="stat-subtext">Target benchmark: ≥ 20%</div>
+    </div>
+  </div>
+</div>
+
+<!-- Budget Alerts Warning (if any) -->
+{% if budget_alerts %}
+<div class="card" style="margin-bottom: 28px; border-color: rgba(244, 63, 94, 0.3); background: rgba(244, 63, 94, 0.05);">
+  <div class="card-header" style="margin-bottom: 12px;">
+    <div class="card-title" style="color: #fda4af;">
+      <i class="ri-error-warning-line"></i> Category Budget Threshold Warnings
+    </div>
+    <a href="{{ url_for('budget.index') }}" class="btn btn-outline btn-sm">Manage Budgets</a>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+    {% for a in budget_alerts %}
+      <div class="badge {{ 'badge-danger' if a.status == 'exceeded' else 'badge-warning' }}" style="padding: 6px 14px; font-size: 0.85rem;">
+        <i class="{{ 'ri-alarm-warning-line' if a.status == 'exceeded' else 'ri-alert-line' }}"></i>
+        <strong>{{ a.category }}</strong>: {{ a.spent | inr }} / {{ a.limit | inr }} ({{ a.pct }}%) - {{ 'Exceeded!' if a.status == 'exceeded' else 'Near Limit' }}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- 4 Analytical Charts Grid -->
+<div class="charts-grid">
+  <!-- Chart 1: Income vs Expenses -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-bar-chart-grouped-line" style="color: #6366f1;"></i>
+        Income vs Expenses (6-Month Trend)
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="incomeExpenseChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 2: Expense Breakdown by Category -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-pie-chart-2-line" style="color: #10b981;"></i>
+        Expense Breakdown by Category
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="categoryDoughnutChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 3: Monthly Net Savings -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-line-chart-line" style="color: #8b5cf6;"></i>
+        Monthly Net Savings Trend
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="savingsTrendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart 4: Budget vs Actual Variance -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-equalizer-line" style="color: #f59e0b;"></i>
+        Category Budget vs Actual Spend
+      </div>
+    </div>
+    <div class="chart-container">
+      <canvas id="budgetVsActualChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Savings Goals Snapshot & Recent Transactions -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+  <!-- Savings Goals -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-safe-2-line" style="color: #10b981;"></i>
+        Active Savings Goals
+      </div>
+      <a href="{{ url_for('savings.index') }}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+
+    {% if savings_goals %}
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        {% for g in savings_goals %}
+          <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 600; color: #fff;">{{ g.name }}</span>
+              <span style="font-size: 0.85rem; color: var(--accent-success); font-weight: 700;">{{ g.progress_percent }}%</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar progress-success" style="width: {{ g.progress_percent }}%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+              <span>Saved: {{ g.current_amount | inr }}</span>
+              <span>Target: {{ g.target_amount | inr }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+        No active savings goals. <a href="{{ url_for('savings.index') }}">Create your first goal →</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Transactions -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <i class="ri-history-line" style="color: #6366f1;"></i>
+        Recent Transactions
+      </div>
+      <a href="{{ url_for('reports.index') }}" class="btn btn-outline btn-sm">Full Report</a>
+    </div>
+
+    {% if recent_transactions %}
+      <div class="table-responsive">
+        <table class="custom-table">
+          <tbody>
+            {% for t in recent_transactions %}
+              <tr>
+                <td style="width: 40px; padding-right: 0;">
+                  <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1rem; {{ 'background: var(--accent-success-bg); color: var(--accent-success);' if t.type == 'income' else 'background: var(--accent-danger-bg); color: var(--accent-danger);' }}">
+                    <i class="{{ 'ri-arrow-left-down-line' if t.type == 'income' else 'ri-arrow-right-up-line' }}"></i>
+                  </div>
+                </td>
+                <td>
+                  <div style="font-weight: 600; color: #fff;">{{ t.description }}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">{{ t.title }} • {{ t.date.strftime('%b %d, %Y') }}</div>
+                </td>
+                <td style="text-align: right;">
+                  <span class="{{ 'amount-income' if t.type == 'income' else 'amount-expense' }}">
+                    {{ '+' if t.type == 'income' else '-' }}{{ t.amount | inr }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+        No recent transactions found.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}
